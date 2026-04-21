@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Star, Shield, MapPin, Calendar, Edit3, Grid, Package, ShoppingBag, LogOut, Save, X } from 'lucide-react';
+import { Star, Shield, MapPin, Calendar, Edit3, Grid, LogOut, Save, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { api } from '../services/api';
+import { api, resolveMediaUrl } from '../services/api';
 import ListingCard from '../components/shared/ListingCard';
 import './ProfilePage.css';
 
@@ -72,6 +72,7 @@ export default function ProfilePage() {
 
   if (!profile) return null;
   const initials = profile.full_name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '??';
+  const avatarUrl = resolveMediaUrl(profile.avatar_url);
 
   return (
     <div className="profile-page">
@@ -82,72 +83,79 @@ export default function ProfilePage() {
 
       <div className="container">
         <div className="profile-card">
-          <div className="profile-avatar-wrap">
-            <div className="profile-avatar">{initials}</div>
-            {profile.verified && (
-              <div className="profile-verified-badge"><Shield size={12} /></div>
-            )}
-          </div>
-
-          <div className="profile-main-info">
-            {editing ? (
-              <div className="edit-form">
-                <input className="edit-input" value={editForm.full_name} onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Full Name" />
-                <input className="edit-input" value={editForm.college} onChange={e => setEditForm(f => ({ ...f, college: e.target.value }))} placeholder="College" />
-                <textarea className="edit-textarea" value={editForm.bio} onChange={e => setEditForm(f => ({ ...f, bio: e.target.value }))} placeholder="Bio..." rows={2} />
-                <div className="edit-actions">
-                  <button className="btn-primary save-btn" onClick={saveProfile} disabled={saving}>
-                    {saving ? <span className="btn-spinner" /> : <><Save size={15} /> Save</>}
-                  </button>
-                  <button className="btn-ghost" onClick={() => setEditing(false)}><X size={15} /> Cancel</button>
+          <div className="profile-topbar">
+            <div className="profile-identity-block">
+              <div className="profile-avatar-wrap">
+                <div className="profile-avatar">
+                  {avatarUrl ? <img src={avatarUrl} alt={profile.full_name} className="profile-avatar-image" /> : initials}
                 </div>
+                {profile.verified && (
+                  <div className="profile-verified-badge"><Shield size={12} /></div>
+                )}
               </div>
-            ) : (
-              <>
-                <div className="profile-name-row">
-                  <div>
-                    <h1 className="profile-name">{profile.full_name}</h1>
-                    <div className="profile-username">@{profile.username}</div>
-                  </div>
-                  <div className="profile-header-actions">
-                    {isMe && (
-                      <>
-                        <button className="edit-btn" onClick={() => setEditing(true)}>
-                          <Edit3 size={15} /><span>Edit</span>
-                        </button>
-                        <button className="logout-btn" onClick={handleLogout}>
-                          <LogOut size={15} />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-                {profile.bio && <p className="profile-bio">{profile.bio}</p>}
-                <div className="profile-meta">
-                  <div className="profile-meta-item"><MapPin size={13} /><span>{profile.college}</span></div>
-                  <div className="profile-meta-item"><Calendar size={13} /><span>Joined {new Date(profile.joined_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span></div>
-                  {profile.rating > 0 && (
-                    <div className="profile-meta-item rating">
-                      <Star size={13} fill="currentColor" />
-                      <span>{profile.rating} ({profile.rating_count} reviews)</span>
+
+              <div className="profile-main-info">
+                {editing ? (
+                  <div className="edit-form">
+                    <input className="edit-input" value={editForm.full_name} onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Full Name" />
+                    <input className="edit-input" value={editForm.college} onChange={e => setEditForm(f => ({ ...f, college: e.target.value }))} placeholder="College" />
+                    <textarea className="edit-textarea" value={editForm.bio} onChange={e => setEditForm(f => ({ ...f, bio: e.target.value }))} placeholder="Bio..." rows={2} />
+                    <div className="edit-actions">
+                      <button className="btn-primary save-btn" onClick={saveProfile} disabled={saving}>
+                        {saving ? <span className="btn-spinner" /> : <><Save size={15} /> Save</>}
+                      </button>
+                      <button className="btn-ghost" onClick={() => setEditing(false)}><X size={15} /> Cancel</button>
                     </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="profile-stats">
-            {[
-              { label: 'Active', val: profile.stats?.listings || 0 },
-              { label: 'Sold', val: profile.stats?.sold || 0 },
-              { label: 'Reviews', val: profile.stats?.reviews || 0 },
-            ].map(s => (
-              <div key={s.label} className="profile-stat">
-                <div className="pstat-val">{s.val}</div>
-                <div className="pstat-label">{s.label}</div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="profile-name-row">
+                      <div className="profile-name-stack">
+                        <h1 className="profile-name">{profile.full_name}</h1>
+                        <div className="profile-username">@{profile.username}</div>
+                      </div>
+                      {isMe && (
+                        <div className="profile-header-actions">
+                          <button className="edit-btn" onClick={() => setEditing(true)}>
+                            <Edit3 size={15} /><span>Edit Profile</span>
+                          </button>
+                          <button className="logout-btn" onClick={handleLogout}>
+                            <LogOut size={15} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {profile.bio && <p className="profile-bio">{profile.bio}</p>}
+                    <div className="profile-meta">
+                      <div className="profile-meta-item"><MapPin size={13} /><span>{profile.college}</span></div>
+                      <div className="profile-meta-item"><Calendar size={13} /><span>Joined {new Date(profile.joined_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span></div>
+                      {profile.rating > 0 && (
+                        <div className="profile-meta-item rating">
+                          <Star size={13} fill="currentColor" />
+                          <span>{profile.rating} ({profile.rating_count} reviews)</span>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
-            ))}
+            </div>
+
+            <div className="profile-stats-panel">
+              <div className="profile-stats-header">Overview</div>
+              <div className="profile-stats">
+                {[
+                  { label: 'Active', val: profile.stats?.listings || 0 },
+                  { label: 'Sold', val: profile.stats?.sold || 0 },
+                  { label: 'Reviews', val: profile.stats?.reviews || 0 },
+                ].map(s => (
+                  <div key={s.label} className="profile-stat">
+                    <div className="pstat-val">{s.val}</div>
+                    <div className="pstat-label">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 

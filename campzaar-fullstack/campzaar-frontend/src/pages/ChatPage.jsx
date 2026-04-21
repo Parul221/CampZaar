@@ -3,12 +3,13 @@ import { Send, Search, MoreVertical, Smile, Paperclip, ArrowLeft, Wifi, WifiOff 
 import { api } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './ChatPage.css';
 
 export default function ChatPage() {
   const { user, token } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [conversations, setConversations] = useState([]);
   const [activeConvId, setActiveConvId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -17,9 +18,12 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const [showConvoList, setShowConvoList] = useState(true);
   const [typingUsers, setTypingUsers] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
   const bottomRef = useRef(null);
   const activeConvIdRef = useRef(null);
   activeConvIdRef.current = activeConvId;
+
+  const requestedConversationId = location.state?.conversationId || null;
 
   const activeConv = conversations.find(c => c.id === activeConvId);
   const otherUser = activeConv?.other_user;
@@ -28,14 +32,24 @@ export default function ChatPage() {
     if (msg.type === 'new_message') {
       const m = msg.data;
       if (m.conversation_id === activeConvIdRef.current) {
-        setMessages(prev => prev.find(p => p.id === m.id) ? prev : [...prev, m]);
+        setMessages(prev => {
+          const withoutTemp = prev.filter((p) => !(String(p.id).startsWith('temp-') && p.text === m.text && p.sender_id === m.sender_id));
+          return withoutTemp.find((p) => p.id === m.id) ? withoutTemp : [...withoutTemp, m];
+        });
       }
-      setConversations(prev => prev.map(c =>
-        c.id === m.conversation_id
-          ? { ...c, last_message: m.text, last_message_at: m.created_at,
-              unread_count: m.conversation_id === activeConvIdRef.current ? 0 : (c.unread_count || 0) + 1 }
-          : c
-      ));
+      setConversations(prev => {
+        const next = prev.map(c =>
+          c.id === m.conversation_id
+            ? {
+                ...c,
+                last_message: m.text,
+                last_message_at: m.created_at,
+                unread_count: m.conversation_id === activeConvIdRef.current ? 0 : (c.unread_count || 0) + 1,
+              }
+            : c
+        );
+        return next.sort((a, b) => new Date(b.last_message_at || b.created_at) - new Date(a.last_message_at || a.created_at));
+      });
     }
     if (msg.type === 'typing') {
       setTypingUsers(t => ({ ...t, [msg.conversation_id]: msg.userId }));
@@ -48,10 +62,21 @@ export default function ChatPage() {
   useEffect(() => {
     if (!user) { navigate('/auth'); return; }
     api.getConversations()
-      .then(setConversations)
+      .then((data) => {
+        const realConversations = data.filter((conv) => conv.other_user?.id);
+        setConversations(realConversations);
+        if (requestedConversationId && realConversations.some((conv) => conv.id === requestedConversationId)) {
+          setActiveConvId(requestedConversationId);
+          setShowConvoList(false);
+          return;
+        }
+        if (!activeConvIdRef.current && realConversations.length > 0) {
+          setActiveConvId(realConversations[0].id);
+        }
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [user, navigate]);
+  }, [user, navigate, requestedConversationId]);
 
   useEffect(() => {
     if (!activeConvId) return;
@@ -62,6 +87,15 @@ export default function ChatPage() {
   }, [activeConvId, wsSend]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  const filteredConversations = conversations.filter((conv) => {
+    const term = searchQuery.trim().toLowerCase();
+    if (!term) return true;
+    const name = conv.other_user?.full_name?.toLowerCase() || '';
+    const listingTitle = conv.listing?.title?.toLowerCase() || '';
+    const preview = conv.last_message?.toLowerCase() || '';
+    return name.includes(term) || listingTitle.includes(term) || preview.includes(term);
+  });
 
   const sendMessage = async () => {
     if (!input.trim() || !activeConvId || sending) return;
@@ -97,11 +131,17 @@ export default function ChatPage() {
               <span>{connected ? 'Live' : 'Connecting...'}</span>
             </div>
           </div>
-          <div className="convo-search-wrap">
-            <Search size={15} />
-            <input type="text" placeholder="Search chats..." className="convo-search" />
+            <div className="convo-search-wrap">
+              <Search size={15} />
+              <input
+                type="text"
+                placeholder="Search chats..."
+                className="convo-search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
 
         <div className="convo-items">
           {loading && [...Array(4)].map((_, i) => (
@@ -122,7 +162,7 @@ export default function ChatPage() {
             </div>
           )}
 
-          {conversations.map(conv => (
+          {filteredConversations.map(conv => (
             <button
               key={conv.id}
               className={`convo-item ${activeConvId === conv.id ? 'active' : ''}`}

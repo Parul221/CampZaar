@@ -42,6 +42,8 @@ export default function Navbar() {
     { label: 'Rentals', path: '/rentals' },
     { label: 'Startups', path: '/startups' },
   ];
+  const avatarUrl = user?.avatar_url;
+  const avatarInitials = user?.full_name?.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase() || '';
 
   return (
     <>
@@ -85,7 +87,7 @@ export default function Navbar() {
 
                 <div className="profile-menu-wrapper">
                   <button className="avatar-btn" onClick={() => setProfileMenuOpen(!profileMenuOpen)} title={user.full_name}>
-                    {user?.full_name?.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase() || ''}
+                    {avatarUrl ? <img src={avatarUrl} alt={user.full_name} className="nav-avatar-image" /> : avatarInitials}
                   </button>
                   
                   {profileMenuOpen && (

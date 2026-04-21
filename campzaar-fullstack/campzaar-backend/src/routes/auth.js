@@ -17,7 +17,6 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ error: "All fields required" });
     }
 
-    // check existing user
     const existing = db
       .prepare("SELECT id FROM users WHERE email = ? OR username = ?")
       .get(email, username);
@@ -29,27 +28,23 @@ router.post("/register", async (req, res) => {
     const id = uuid();
     const hashed = await bcrypt.hash(password, 10);
 
-    // insert user
     db.prepare(`
       INSERT INTO users (id,email,username,password,full_name,college)
       VALUES (?,?,?,?,?,?)
     `).run(id, email, username, hashed, full_name, college);
 
-    // get inserted user
     const user = db
-      .prepare("SELECT id,email,username,full_name,college FROM users WHERE id = ?")
+      .prepare("SELECT id,email,username,full_name,college,avatar_url FROM users WHERE id = ?")
       .get(id);
 
     const token = jwt.sign({ id }, JWT_SECRET);
 
     res.json({ token, user });
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
-
 
 // ================= LOGIN =================
 router.post("/login", async (req, res) => {
@@ -69,23 +64,18 @@ router.post("/login", async (req, res) => {
     delete user.password;
 
     res.json({ token, user });
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-
 // ================= GOOGLE AUTH =================
-
-// 1️⃣ Redirect to Google
 router.get(
   "/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
-// 2️⃣ Callback
 router.get(
   "/google/callback",
   passport.authenticate("google", { session: false, failureRedirect: "http://localhost:3000/login?error=auth_failed" }),
@@ -96,54 +86,52 @@ router.get(
       }
 
       const email = req.user.email;
-      console.log("✅ Google Auth Success - Email:", email);
+      const avatar_url = req.user.avatar_url || "";
 
-      // restrict domain
       if (!email.endsWith("@chitkara.edu.in")) {
-        console.log("❌ Unauthorized email domain:", email);
         return res.redirect("http://localhost:3000/login?error=unauthorized");
       }
 
-      // check existing
       const user = db
         .prepare("SELECT * FROM users WHERE email = ?")
         .get(email);
 
       if (user) {
+        db.prepare(`
+          UPDATE users
+          SET full_name = ?, avatar_url = COALESCE(NULLIF(?, ''), avatar_url)
+          WHERE id = ?
+        `).run(req.user.name || user.full_name, avatar_url, user.id);
+
         const token = jwt.sign({ id: user.id }, JWT_SECRET);
-        console.log("✅ Existing user logged in:", email);
         return res.redirect(`http://localhost:3000/login-success?token=${token}`);
       }
 
-      // create new user
       const id = uuid();
       const username = email.split("@")[0];
       const full_name = req.user.name;
       const college = "Chitkara";
 
       db.prepare(`
-        INSERT INTO users (id,email,username,password,full_name,college)
-        VALUES (?,?,?,?,?,?)
-      `).run(id, email, username, null, full_name, college);
+        INSERT INTO users (id,email,username,password,full_name,college,avatar_url)
+        VALUES (?,?,?,?,?,?,?)
+      `).run(id, email, username, null, full_name, college, avatar_url);
 
       const token = jwt.sign({ id }, JWT_SECRET);
-      console.log("✅ New user created:", email);
       return res.redirect(`http://localhost:3000/login-success?token=${token}`);
-
     } catch (err) {
-      console.error("❌ Google callback error:", err);
+      console.error("Google callback error:", err);
       res.redirect("http://localhost:3000/login?error=server_error");
     }
   }
 );
-
 
 // ================= GET CURRENT USER =================
 const { auth } = require("../middleware/auth");
 
 router.get("/me", auth, (req, res) => {
   const user = db.prepare(`
-    SELECT id, email, username, full_name, college
+    SELECT id, email, username, full_name, college, bio, avatar_url, verified, rating, rating_count
     FROM users WHERE id = ?
   `).get(req.user.id);
 
@@ -168,12 +156,10 @@ router.put("/profile", auth, (req, res) => {
     res.json(user);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-
-// ================= TEST =================
 router.get("/", (req, res) => {
   res.send("Auth working");
 });

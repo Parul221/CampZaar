@@ -76,4 +76,36 @@ CREATE TABLE IF NOT EXISTS reviews (
 );
 `);
 
+db.exec(`
+CREATE TABLE IF NOT EXISTS conversations (
+  id TEXT PRIMARY KEY,
+  listing_id TEXT,
+  buyer_id TEXT NOT NULL,
+  seller_id TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(listing_id, buyer_id, seller_id),
+  FOREIGN KEY (listing_id) REFERENCES listings(id),
+  FOREIGN KEY (buyer_id) REFERENCES users(id),
+  FOREIGN KEY (seller_id) REFERENCES users(id)
+);
+`);
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS messages (
+  id TEXT PRIMARY KEY,
+  conversation_id TEXT NOT NULL,
+  sender_id TEXT NOT NULL,
+  text TEXT NOT NULL,
+  read INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+  FOREIGN KEY (sender_id) REFERENCES users(id)
+);
+`);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_conversations_buyer ON conversations(buyer_id);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_conversations_seller ON conversations(seller_id);`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id, created_at);`);
+
 module.exports = db;

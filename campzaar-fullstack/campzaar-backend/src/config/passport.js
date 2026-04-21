@@ -12,6 +12,7 @@ passport.use(
     async (accessToken, refreshToken, profile, done) => {
       try {
         const email = profile.emails[0].value;
+        const avatar_url = profile.photos?.[0]?.value || "";
 
         // 🔥 IMPORTANT FILTER (YOUR REQUIREMENT)
         if (!email.endsWith("@chitkara.edu.in")) {
@@ -22,6 +23,7 @@ passport.use(
         const user = {
           email,
           name: profile.displayName,
+          avatar_url,
         };
 
         return done(null, user);

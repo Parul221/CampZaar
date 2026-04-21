@@ -201,7 +201,15 @@
   padding: 16px 28px;
 }
 
-.like-action, .share-action {
+.own-listing-btn {
+  background: var(--bg-overlay);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.like-action, .share-action, .delete-action {
   width: 52px;
   height: 52px;
   border-radius: var(--radius-md);
@@ -217,6 +225,8 @@
 .like-action:hover { color: #ef4444; border-color: #ef4444; transform: scale(1.05); }
 .like-action.liked { color: #ef4444; background: rgba(239, 68, 68, 0.1); border-color: #ef4444; }
 .share-action:hover { color: var(--brand-purple); border-color: var(--brand-purple); }
+.delete-action:hover { color: #ef4444; border-color: #ef4444; background: rgba(239, 68, 68, 0.08); }
+.delete-action:disabled { opacity: 0.7; cursor: wait; }
 
 /* Seller Card */
 .seller-card {
@@ -242,6 +252,14 @@
   display: flex;
   align-items: center;
   gap: 14px;
+}
+
+.seller-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .seller-big-avatar {
@@ -302,6 +320,64 @@
 }
 .seller-profile-btn:hover { background: var(--border); }
 
+.seller-chat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  background: var(--grad-primary);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.seller-chat-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.seller-chat-btn:disabled {
+  opacity: 0.75;
+  cursor: wait;
+}
+
+.seller-chat-btn-disabled {
+  background: var(--bg-overlay);
+  color: var(--text-muted);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.seller-chat-btn-disabled:hover:not(:disabled) {
+  transform: none;
+}
+
+.seller-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 700;
+  transition: transform 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+}
+
+.seller-delete-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: rgba(239, 68, 68, 0.14);
+}
+
+.seller-delete-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
 .product-meta {
   display: flex;
   align-items: center;
@@ -320,4 +396,10 @@
 
 @media (max-width: 600px) {
   .product-price { font-size: 32px; }
+  .seller-card-body { align-items: flex-start; }
+  .seller-card-actions {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 8px;
+  }
 }

@@ -107,6 +107,43 @@
   backdrop-filter: blur(4px);
 }
 
+.card-chat-pill {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(240, 90, 40, 0.92);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  z-index: 2;
+}
+
+.card-chat-pill:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.card-chat-pill:disabled {
+  opacity: 0.75;
+  cursor: wait;
+}
+
+.card-chat-pill.disabled {
+  background: rgba(33, 33, 38, 0.9);
+  color: rgba(255,255,255,0.72);
+}
+
+.card-chat-pill.disabled:disabled {
+  cursor: not-allowed;
+}
+
 .card-content {
   padding: 14px 16px 16px;
 }

@@ -30,6 +30,34 @@ function enrichListing(row, userId) {
   };
 }
 
+function buildListingFilters(query = {}) {
+  const { category, type, condition, q } = query;
+  let where = " WHERE l.status = 'active'";
+  const params = [];
+
+  if (category && category !== 'all') {
+    where += ' AND l.category = ?';
+    params.push(category);
+  }
+
+  if (type && type !== 'All') {
+    where += ' AND l.type = ?';
+    params.push(type);
+  }
+
+  if (condition && condition !== 'All') {
+    where += ' AND l.condition = ?';
+    params.push(condition);
+  }
+
+  if (q) {
+    where += ' AND (l.title LIKE ? OR l.description LIKE ?)';
+    params.push(`%${q}%`, `%${q}%`);
+  }
+
+  return { where, params };
+}
+
 // ✅ GET ALL LISTINGS
 router.get('/', optionalAuth, (req, res) => {
   try {
@@ -45,28 +73,14 @@ router.get('/', optionalAuth, (req, res) => {
 
     const offset = (page - 1) * limit;
 
-    let sql = `SELECT l.* FROM listings l WHERE 1=1`;
-    const params = [];
-
-    if (category && category !== 'all') {
-      sql += ' AND l.category = ?';
-      params.push(category);
-    }
-
-    if (type) {
-      sql += ' AND l.type = ?';
-      params.push(type);
-    }
-
-    if (condition) {
-      sql += ' AND l.condition = ?';
-      params.push(condition);
-    }
-
-    if (q) {
-      sql += ' AND (l.title LIKE ? OR l.description LIKE ?)';
-      params.push(`%${q}%`, `%${q}%`);
-    }
+    const { where, params } = buildListingFilters({
+      category,
+      type,
+      condition,
+      q,
+    });
+    let sql = `SELECT l.* FROM listings l${where}`;
+    const totalParams = [...params];
 
     const orderMap = {
       newest: 'l.created_at DESC',
@@ -84,7 +98,9 @@ router.get('/', optionalAuth, (req, res) => {
       rows = Object.values(rows || {});
     }
 
-    const totalRow = db.prepare(`SELECT COUNT(*) as c FROM listings`).get();
+    const totalRow = db
+      .prepare(`SELECT COUNT(*) as c FROM listings l${where}`)
+      .get(...totalParams);
     const total = totalRow?.c || 0;
 
     res.json({
@@ -120,7 +136,7 @@ router.get('/user/:userId', optionalAuth, (req, res) => {
 // ✅ GET SINGLE
 router.get('/:id', optionalAuth, (req, res) => {
   const row = db
-    .prepare('SELECT * FROM listings WHERE id = ?')
+    .prepare("SELECT * FROM listings WHERE id = ? AND status = 'active'")
     .get(req.params.id);
 
   if (!row) return res.status(404).json({ error: 'Listing not found' });

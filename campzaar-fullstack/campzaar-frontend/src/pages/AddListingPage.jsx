@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, CheckCircle, Camera } from 'lucide-react';
-import { api } from '../services/api';
+import { api, API_ORIGIN, resolveMediaUrl } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import { categories } from '../data/mockData';
 import './AddListingPage.css';
 
 const steps = ['Basic Info', 'Details', 'Pricing', 'Review'];
 const conditions = ['Like New', 'Good', 'Fair', 'For Parts'];
+const listingCategories = [
+  ...categories.filter((c) => c.id !== 'all' && c.id !== 'startups'),
+  { id: 'other', label: 'Other', icon: '🧩', color: '#f43f5e' },
+];
 
 export default function AddListingPage() {
   const navigate = useNavigate();
@@ -16,6 +20,7 @@ export default function AddListingPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({
     title: '', description: '', category: '', condition: '',
     type: 'sell', price: '', original_price: '', rent_period: 'day',
@@ -25,6 +30,51 @@ export default function AddListingPage() {
   if (!user) { navigate('/auth'); return null; }
 
   const update = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    setUploading(true);
+    setError('');
+    const newImages = [];
+
+    try {
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const response = await fetch(`${API_ORIGIN}/api/upload`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('cz_token')}`
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Upload failed');
+        }
+
+        const data = await response.json();
+        newImages.push({
+          url: resolveMediaUrl(data.url),
+          filename: data.filename
+        });
+      }
+
+      setForm(f => ({ ...f, images: [...f.images, ...newImages] }));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = (index) => {
+    setForm(f => ({ ...f, images: f.images.filter((_, i) => i !== index) }));
+  };
 
   const handleSubmit = async () => {
   console.log("🔥 CLICKED");
@@ -41,7 +91,8 @@ export default function AddListingPage() {
       title: form.title,
       category: form.category,
       condition: form.condition,
-      price: form.price
+      price: form.price,
+      images: form.images
     });
 
     const res = await api.createListing({
@@ -57,7 +108,7 @@ export default function AddListingPage() {
       rent_period: form.type === 'rent' ? form.rent_period : null,
       tags,
       meetup_location: form.meetup_location,
-      images: [],
+      images: form.images.map(img => img.url),
     });
 
     console.log("✅ SUCCESS:", res);
@@ -121,21 +172,38 @@ export default function AddListingPage() {
         <div className="step-content">
           {step === 0 && (
             <div className="form-section">
-              <h3 className="form-section-title">What are you selling?</h3>
+              <h3 className="form-section-title">What type of product is it?</h3>
               <div className="image-upload-area">
-                <div className="upload-placeholder">
-                  <Camera size={36}/><p>Add photos</p><span>Coming soon — image upload</span>
-                </div>
+                {form.images.length > 0 ? (
+                  <div className="image-preview-grid">
+                    {form.images.map((img, idx) => (
+                      <div key={idx} className="image-preview-item">
+                        <img src={img.url} alt={`Preview ${idx}`} />
+                        <button className="remove-image-btn" onClick={() => removeImage(idx)}>✕</button>
+                      </div>
+                    ))}
+                    <label className="image-add-more">
+                      <Camera size={28} /><span>Add more</span>
+                      <input type="file" multiple accept="image/*" onChange={handleImageUpload} disabled={uploading} style={{ display: 'none' }} />
+                    </label>
+                  </div>
+                ) : (
+                  <label className="upload-placeholder">
+                    <Camera size={36} /><p>Add photos</p><span>Click to upload</span>
+                    <input type="file" multiple accept="image/*" onChange={handleImageUpload} disabled={uploading} style={{ display: 'none' }} />
+                  </label>
+                )}
+                {uploading && <div className="upload-status">⏳ Uploading images...</div>}
               </div>
               <div className="form-field">
                 <label className="form-label">Title *</label>
-                <input className="form-input" placeholder="e.g. MacBook Pro M2 - 14 inch"
+                <input className="form-input" placeholder="e.g. Book set, pen stand, hoodie, cycle"
                   value={form.title} onChange={e => update('title', e.target.value)}/>
               </div>
               <div className="form-field">
                 <label className="form-label">Category *</label>
                 <div className="category-grid">
-                  {categories.filter(c => c.id !== 'all').map(cat => (
+                  {listingCategories.map(cat => (
                     <button key={cat.id} className={`cat-select ${form.category === cat.id ? 'active' : ''}`}
                       onClick={() => update('category', cat.id)} style={{ '--cat-color': cat.color }}>
                       <span className="cat-select-icon">{cat.icon}</span><span>{cat.label}</span>
@@ -152,7 +220,7 @@ export default function AddListingPage() {
               <div className="form-field">
                 <label className="form-label">Description *</label>
                 <textarea className="form-textarea" rows={5}
-                  placeholder="Describe condition, what's included, reason for selling..."
+                  placeholder="Describe the item, condition, quantity, and what is included..."
                   value={form.description} onChange={e => update('description', e.target.value)}/>
               </div>
               <div className="form-field">
@@ -166,12 +234,12 @@ export default function AddListingPage() {
               </div>
               <div className="form-field">
                 <label className="form-label">Tags (comma separated)</label>
-                <input className="form-input" placeholder="e.g. Apple, M2, 512GB"
+                <input className="form-input" placeholder="e.g. book, pen, clothes, notes"
                   value={form.tags} onChange={e => update('tags', e.target.value)}/>
               </div>
               <div className="form-field">
                 <label className="form-label">Meetup Location</label>
-                <input className="form-input" placeholder="e.g. Library Gate, Main Campus"
+                <input className="form-input" placeholder="e.g. Campus gate, hostel block, library"
                   value={form.meetup_location} onChange={e => update('meetup_location', e.target.value)}/>
               </div>
             </div>
@@ -228,13 +296,20 @@ export default function AddListingPage() {
             <div className="form-section preview-section">
               <h3 className="form-section-title">Review your listing</h3>
               <div className="preview-card">
-                <div className="preview-img"><div className="preview-img-placeholder">📷</div></div>
+                <div className="preview-img">
+                  {form.images.length > 0 ? (
+                    <img src={form.images[0].url} alt="Preview" />
+                  ) : (
+                    <div className="preview-img-placeholder">📷</div>
+                  )}
+                </div>
                 <div className="preview-info">
                   <div className={`preview-type ${form.type}`}>{form.type === 'rent' ? '📅 For Rent' : '🏷️ For Sale'}</div>
                   <h3 className="preview-title">{form.title || 'Your Item'}</h3>
                   <div className="preview-price">₹{form.price ? Number(form.price).toLocaleString() : '0'}{form.type === 'rent' && <span>/{form.rent_period}</span>}</div>
                   {form.condition && <div className="preview-condition">{form.condition}</div>}
                   {form.description && <p className="preview-desc">{form.description}</p>}
+                  {form.images.length > 0 && <div className="preview-images-count">📸 {form.images.length} photo{form.images.length !== 1 ? 's' : ''}</div>}
                 </div>
               </div>
               {error && <div className="auth-error" style={{ marginTop: 12 }}>⚠️ {error}</div>}

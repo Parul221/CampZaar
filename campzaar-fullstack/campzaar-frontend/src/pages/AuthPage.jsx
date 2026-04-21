@@ -5,10 +5,11 @@ import { useAuth } from '../hooks/useAuth';
 import './AuthPage.css';
 
 const COLLEGES = [
+  'Chitkara University',
   'IIT Delhi', 'IIT Bombay', 'IIT Madras', 'IIT Kanpur', 'IIT Kharagpur',
   'BITS Pilani', 'NIT Trichy', 'Delhi University', 'DTU', 'NSUT',
   'Amity University', 'VIT Vellore', 'Manipal University', 'Pune University',
-  'Mumbai University', 'Anna University', 'Chitkara University', 'Other',
+  'Mumbai University', 'Anna University', 'Other',
 ];
 
 export default function AuthPage() {

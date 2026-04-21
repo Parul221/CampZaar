@@ -1,4 +1,46 @@
 const BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000/api'; // priyal
+export const API_ORIGIN = BASE.replace(/\/api\/?$/, '');
+
+export function resolveMediaUrl(url) {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${API_ORIGIN}${url.startsWith('/') ? url : `/${url}`}`;
+}
+
+function initials(name = '') {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || '?';
+}
+
+function normalizeListing(listing) {
+  if (!listing) return listing;
+
+  const images = Array.isArray(listing.images)
+    ? listing.images.map(resolveMediaUrl).filter(Boolean)
+    : [];
+  const sellerName = listing.seller?.name || listing.seller?.full_name || listing.seller?.username || 'Unknown Seller';
+
+  return {
+    ...listing,
+    images,
+    image: resolveMediaUrl(listing.image) || images[0] || '',
+    originalPrice: listing.originalPrice ?? listing.original_price ?? null,
+    tags: Array.isArray(listing.tags) ? listing.tags : [],
+    seller: listing.seller
+      ? {
+          ...listing.seller,
+          name: sellerName,
+          avatar: listing.seller.avatar || initials(sellerName),
+          avatar_url: resolveMediaUrl(listing.seller.avatar_url),
+        }
+      : null,
+  };
+}
 
 function getToken() {
   return localStorage.getItem('cz_token');
@@ -43,14 +85,19 @@ export const api = {
   // Listings
   getListings: (params = {}) => {
     const q = new URLSearchParams(params).toString();
-    return request('GET', `/listings${q ? '?' + q : ''}`, null, false);
+    return request('GET', `/listings${q ? '?' + q : ''}`, null, false)
+      .then((data) => ({
+        ...data,
+        listings: Array.isArray(data.listings) ? data.listings.map(normalizeListing) : [],
+      }));
   },
-  getListing: (id) => request('GET', `/listings/${id}`, null, false),
+  getListing: (id) => request('GET', `/listings/${id}`, null, false).then(normalizeListing),
   createListing: (body) => request('POST', '/listings', body),
   updateListing: (id, body) => request('PUT', `/listings/${id}`, body),
   deleteListing: (id) => request('DELETE', `/listings/${id}`),
   likeListing: (id) => request('POST', `/listings/${id}/like`),
-  getUserListings: (userId) => request('GET', `/listings/user/${userId}`, null, false),
+  getUserListings: (userId) => request('GET', `/listings/user/${userId}`, null, false)
+    .then((data) => Array.isArray(data) ? data.map(normalizeListing) : []),
 
   // Conversations
   getConversations: () => request('GET', '/conversations'),

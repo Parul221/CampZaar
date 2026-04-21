@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Share2, Shield, Star, MapPin, Eye, ChevronLeft, CheckCircle } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Shield, Star, MapPin, Eye, ChevronLeft, CheckCircle, Trash2 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import ListingCard from '../components/shared/ListingCard';
@@ -16,6 +16,7 @@ export default function ProductPage() {
   const [activeImg, setActiveImg] = useState(0);
   const [loading, setLoading] = useState(true);
   const [chatLoading, setChatLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -43,12 +44,28 @@ export default function ProductPage() {
     if (product.seller?.id === user.id) return;
     setChatLoading(true);
     try {
-      await api.startConversation({ listing_id: id, seller_id: product.seller.id });
-      navigate('/chat');
+      const conversation = await api.startConversation({ listing_id: id, seller_id: product.seller.id });
+      navigate('/chat', { state: { conversationId: conversation.id } });
     } catch (err) {
       alert(err.message);
     } finally {
       setChatLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!user || product.seller?.id !== user.id || deleteLoading) return;
+    const confirmed = window.confirm(`Delete "${product.title}"? This will remove it from the marketplace.`);
+    if (!confirmed) return;
+
+    try {
+      setDeleteLoading(true);
+      await api.deleteListing(id);
+      navigate('/profile', { replace: true });
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -139,18 +156,28 @@ export default function ProductPage() {
               <div className="safety-badge"><Shield size={15} className="shield-icon"/><span>CampZaar Guarantee</span></div>
             </div>
 
-            {product.seller?.id !== user?.id && (
-              <div className="product-actions">
+            <div className="product-actions">
+              {product.seller?.id !== user?.id ? (
                 <button className="btn-primary chat-btn" onClick={handleChat} disabled={chatLoading}>
                   <MessageCircle size={18}/>
                   <span>{chatLoading ? 'Opening...' : 'Chat with Seller'}</span>
                 </button>
-                <button className={`like-action ${liked ? 'liked' : ''}`} onClick={handleLike}>
-                  <Heart size={20} fill={liked ? 'currentColor' : 'none'}/>
+              ) : (
+                <button className="chat-btn own-listing-btn" disabled>
+                  <MessageCircle size={18}/>
+                  <span>Your Listing</span>
                 </button>
-                <button className="share-action"><Share2 size={20}/></button>
-              </div>
-            )}
+              )}
+              {product.seller?.id === user?.id && (
+                <button className="delete-action" onClick={handleDelete} disabled={deleteLoading}>
+                  <Trash2 size={18} />
+                </button>
+              )}
+              <button className={`like-action ${liked ? 'liked' : ''}`} onClick={handleLike}>
+                <Heart size={20} fill={liked ? 'currentColor' : 'none'}/>
+              </button>
+              <button className="share-action"><Share2 size={20}/></button>
+            </div>
 
             {product.seller && (
               <div className="seller-card">
@@ -173,9 +200,28 @@ export default function ProductPage() {
                       </div>
                     )}
                   </div>
-                  <button className="seller-profile-btn" onClick={() => navigate(`/profile/${product.seller.id}`)}>
-                    View Profile
-                  </button>
+                  <div className="seller-card-actions">
+                    {product.seller?.id !== user?.id ? (
+                      <button className="seller-chat-btn" onClick={handleChat} disabled={chatLoading}>
+                        <MessageCircle size={16} />
+                        <span>{chatLoading ? 'Opening...' : 'Chat Now'}</span>
+                      </button>
+                    ) : (
+                      <button className="seller-chat-btn seller-chat-btn-disabled" disabled>
+                        <MessageCircle size={16} />
+                        <span>Your Listing</span>
+                      </button>
+                    )}
+                    <button className="seller-profile-btn" onClick={() => navigate(`/profile/${product.seller.id}`)}>
+                      View Profile
+                    </button>
+                    {product.seller?.id === user?.id && (
+                      <button className="seller-delete-btn" onClick={handleDelete} disabled={deleteLoading}>
+                        <Trash2 size={16} />
+                        <span>{deleteLoading ? 'Deleting...' : 'Delete Post'}</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
