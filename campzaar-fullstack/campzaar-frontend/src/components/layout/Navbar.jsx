@@ -16,7 +16,7 @@ export default function Navbar() {
 
   // ✅ Google login function
  const handleGoogleLogin = () => {
-  window.location.href = "http://localhost:4001/api/auth/google";
+  window.location.href = "http://localhost:4000/api/auth/google";
 };
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);

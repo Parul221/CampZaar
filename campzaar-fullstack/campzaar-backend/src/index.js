@@ -28,7 +28,7 @@ app.get("/", (req, res) => {
 
 setupWebSocket(server);
 
-const PORT = Number(process.env.PORT || 4001);
+const PORT = Number(process.env.PORT || 4000);
 server.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
