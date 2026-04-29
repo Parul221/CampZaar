@@ -1,4 +1,4 @@
-const BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000/api'; // priyal
+const BASE = process.env.REACT_APP_API_URL || 'http://localhost:4001/api'; // priyal
 export const API_ORIGIN = BASE.replace(/\/api\/?$/, '');
 
 export function resolveMediaUrl(url) {
