@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, TrendingUp, ChevronRight } from 'lucide-react';
 import ListingCard from '../components/shared/ListingCard';
 import { api } from '../services/api';
-import { categories } from '../data/mockData';
+import { listingCategories } from '../data/listingCategories';
 import './LandingPage.css';
 import AnimatedMascot from "../components/AnimatedMascot"; // priyal
 
@@ -57,7 +57,7 @@ export default function LandingPage() {
             <div className="hero-search">
               <div className="search-wrap">
                 <span className="search-icon">🔍</span>
-                <input type="text" placeholder="Search textbooks, electronics, bikes..."
+                <input type="text" placeholder="Search hoodies, accessories, snacks, notes..."
                   value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="search-input"/>
               </div>
               <button className="btn-primary explore-btn" onClick={() => navigate('/feed')}>
@@ -77,8 +77,8 @@ export default function LandingPage() {
             <div className="hero-card-stack">
               <div className="hero-main-card"><div className="hmc-img-placeholder"/></div>
               <div className="right-section"><AnimatedMascot /> {/* priyal */}</div>
-              <div className="hero-float-card fc-1"><div className="fc-icon">📚</div><div><div className="fc-title">Books</div><div className="fc-sub">Browse listings</div></div></div>
-              <div className="hero-float-card fc-2"><div className="fc-icon">🛵</div><div><div className="fc-title">Transport</div><div className="fc-sub">Rent by day</div></div></div>
+              <div className="hero-float-card fc-1"><div className="fc-icon">Wear</div><div><div className="fc-title">Clothing</div><div className="fc-sub">Swap and shop</div></div></div>
+              <div className="hero-float-card fc-2"><div className="fc-icon">Food</div><div><div className="fc-title">Eatables</div><div className="fc-sub">Campus favorites</div></div></div>
             </div>
           </div>
         </div>
@@ -87,7 +87,7 @@ export default function LandingPage() {
       <section className="categories-section">
         <div className="container">
           <div className="categories-scroll">
-            {categories.map(cat => (
+            {listingCategories.map(cat => (
               <button key={cat.id} className={`cat-pill ${activeCategory === cat.id ? 'active' : ''}`}
                 onClick={() => setActiveCategory(cat.id)} style={{ '--cat-color': cat.color }}>
                 <span className="cat-icon">{cat.icon}</span><span>{cat.label}</span>

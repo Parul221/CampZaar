@@ -1,0 +1,150 @@
+.startup-shop-page {
+  min-height: 100vh;
+  padding-top: calc(var(--nav-height) + 30px);
+  padding-bottom: 60px;
+  background:
+    radial-gradient(circle at top left, rgba(251, 146, 60, 0.12), transparent 20%),
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 25%),
+    var(--bg-secondary);
+}
+
+.startup-shop-hero {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 24px;
+  margin-top: 18px;
+  margin-bottom: 30px;
+}
+
+.startup-shop-copy,
+.startup-shop-panel {
+  border-radius: 28px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-md);
+}
+
+.startup-shop-copy {
+  padding: 34px;
+  background: linear-gradient(135deg, #111827 0%, #9a3412 100%);
+  color: white;
+}
+
+.startup-shop-copy h1 {
+  margin: 18px 0 10px;
+  font-size: clamp(34px, 4vw, 52px);
+  line-height: 1;
+}
+
+.startup-shop-copy p {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 18px;
+}
+
+.startup-shop-badge,
+.startup-shop-meta span,
+.startup-chip,
+.startup-website {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.startup-shop-badge {
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.startup-shop-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.startup-shop-meta span {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 13px;
+}
+
+.startup-shop-panel {
+  padding: 28px;
+}
+
+.startup-shop-panel p {
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.startup-chip {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.startup-website {
+  margin-top: 16px;
+  color: var(--brand-orange);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.startup-shop-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.startup-catalogue-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.startup-catalogue-header h2 {
+  margin: 0 0 6px;
+  font-size: 28px;
+}
+
+.startup-catalogue-header p {
+  color: var(--text-secondary);
+}
+
+.startup-empty-state {
+  margin-top: 12px;
+}
+
+.startup-shop-skeleton {
+  height: 300px;
+  border-radius: 28px;
+  margin-bottom: 24px;
+}
+
+.startup-product-skeleton {
+  height: 320px;
+  border-radius: 24px;
+}
+
+@media (max-width: 900px) {
+  .startup-shop-hero {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .startup-shop-actions {
+    flex-direction: column;
+  }
+}

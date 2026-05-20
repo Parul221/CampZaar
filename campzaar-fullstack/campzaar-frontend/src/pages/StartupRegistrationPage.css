@@ -1,0 +1,103 @@
+.startup-form-page {
+  min-height: 100vh;
+  padding-top: calc(var(--nav-height) + 32px);
+  padding-bottom: 56px;
+  background:
+    radial-gradient(circle at top right, rgba(240, 90, 40, 0.14), transparent 26%),
+    radial-gradient(circle at left center, rgba(247, 68, 122, 0.12), transparent 24%),
+    var(--bg-secondary);
+}
+
+.startup-form-shell {
+  max-width: 980px;
+}
+
+.startup-form-card {
+  margin-top: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.startup-form-hero {
+  padding: 36px;
+  background: linear-gradient(135deg, #1f2937 0%, #7c2d12 100%);
+  color: white;
+}
+
+.startup-form-badge {
+  display: inline-flex;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.startup-form-hero h1 {
+  margin: 14px 0 10px;
+  font-size: clamp(30px, 4vw, 44px);
+}
+
+.startup-form-hero p {
+  color: rgba(255, 255, 255, 0.82);
+  max-width: 560px;
+}
+
+.startup-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  padding: 32px 36px 36px;
+}
+
+.startup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.startup-field span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.startup-field input,
+.startup-field textarea,
+.startup-field select {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.startup-field-wide {
+  grid-column: 1 / -1;
+}
+
+.startup-form-error {
+  grid-column: 1 / -1;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.startup-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .startup-form-grid {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+}

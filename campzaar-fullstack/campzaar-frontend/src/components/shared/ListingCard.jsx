@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, Eye, MessageCircle, Star, Shield } from 'lucide-react';
-import { api } from '../../services/api';
+import { api, resolveMediaUrl } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import './ListingCard.css';
 
 export default function ListingCard({ listing, variant = 'grid' }) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [liked, setLiked] = useState(listing.liked);
+  const [saved, setSaved] = useState(listing.wishlisted ?? listing.liked);
   const [chatLoading, setChatLoading] = useState(false);
-  const listingImage = listing.image || listing.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80';
+  const [saving, setSaving] = useState(false);
+  const rawImage = listing.image || listing.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80';
+  const listingImage = resolveMediaUrl(rawImage);
   const sellerName = listing.seller?.name || listing.seller?.full_name || 'Unknown Seller';
-  const sellerAvatar = listing.seller?.avatar || sellerName.slice(0, 2).toUpperCase();
+  const sellerAvatar = listing.seller?.avatar_url ? resolveMediaUrl(listing.seller.avatar_url) : (listing.seller?.avatar || sellerName.slice(0, 2).toUpperCase());
+  const sellerAvatarIsUrl = typeof sellerAvatar === 'string' && sellerAvatar.startsWith('http');
   const isOwnListing = !!listing.seller?.id && listing.seller.id === user?.id;
   const canChat = !!listing.seller?.id && !isOwnListing;
 
@@ -42,6 +45,24 @@ export default function ListingCard({ listing, variant = 'grid' }) {
     }
   };
 
+  const handleSave = async (e) => {
+    e.stopPropagation();
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const response = await api.toggleWishlist(listing.id);
+      setSaved(response.saved);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className={`listing-card ${variant}`} onClick={() => navigate(`/product/${listing.id}`)}>
       {/* Image */}
@@ -61,10 +82,11 @@ export default function ListingCard({ listing, variant = 'grid' }) {
 
         {/* Like Button */}
         <button
-          className={`card-like ${liked ? 'liked' : ''}`}
-          onClick={e => { e.stopPropagation(); setLiked(!liked); }}
+          className={`card-like ${saved ? 'liked' : ''}`}
+          onClick={handleSave}
+          disabled={saving}
         >
-          <Heart size={16} fill={liked ? 'currentColor' : 'none'} />
+          <Heart size={16} fill={saved ? 'currentColor' : 'none'} />
         </button>
 
         {/* Views */}
@@ -112,9 +134,10 @@ export default function ListingCard({ listing, variant = 'grid' }) {
 
         {/* Seller */}
         <div className="card-seller">
-          <div className="seller-avatar">{sellerAvatar}</div>
+          <div className="seller-avatar">{sellerAvatarIsUrl ? <img src={sellerAvatar} alt={sellerName} className="seller-avatar-image" /> : sellerAvatar}</div>
           <div className="seller-info">
             <span className="seller-name">
+
               {sellerName}
               {listing.seller?.verified && <Shield size={11} className="verified-icon" />}
             </span>

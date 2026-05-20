@@ -19,9 +19,17 @@ function enrichListing(row, userId) {
     ...row,
     tags: safeParse(row.tags),
     images: safeParse(row.images),
+    startup: row.startup_id
+      ? db.prepare('SELECT id, name, tagline, category FROM startups WHERE id = ?').get(row.startup_id)
+      : null,
     liked: userId
       ? !!db.prepare(
           'SELECT 1 FROM listing_likes WHERE user_id = ? AND listing_id = ?'
+        ).get(userId, row.id)
+      : false,
+    wishlisted: userId
+      ? !!db.prepare(
+          'SELECT 1 FROM listing_wishlist WHERE user_id = ? AND listing_id = ?'
         ).get(userId, row.id)
       : false,
     seller: db.prepare(
@@ -31,7 +39,7 @@ function enrichListing(row, userId) {
 }
 
 function buildListingFilters(query = {}) {
-  const { category, type, condition, q } = query;
+  const { category, type, condition, q, startup_id } = query;
   let where = " WHERE l.status = 'active'";
   const params = [];
 
@@ -55,8 +63,30 @@ function buildListingFilters(query = {}) {
     params.push(`%${q}%`, `%${q}%`);
   }
 
+  if (startup_id) {
+    where += ' AND l.startup_id = ?';
+    params.push(startup_id);
+  }
+
   return { where, params };
 }
+
+// ✅ GET WISHLIST
+router.get('/wishlist', auth, (req, res) => {
+  try {
+    const rows = db.prepare(
+      `SELECT l.* FROM listings l
+       JOIN listing_wishlist w ON w.listing_id = l.id
+       WHERE w.user_id = ? AND l.status = 'active'
+       ORDER BY w.created_at DESC`
+    ).all(req.user.id);
+
+    res.json(rows.map((row) => enrichListing(row, req.user.id)));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 // ✅ GET ALL LISTINGS
 router.get('/', optionalAuth, (req, res) => {
@@ -66,6 +96,7 @@ router.get('/', optionalAuth, (req, res) => {
       type,
       condition,
       q,
+      startup_id,
       sort,
       page = 1,
       limit = 20,
@@ -78,6 +109,7 @@ router.get('/', optionalAuth, (req, res) => {
       type,
       condition,
       q,
+      startup_id,
     });
     let sql = `SELECT l.* FROM listings l${where}`;
     const totalParams = [...params];
@@ -164,6 +196,7 @@ router.post('/', auth, (req, res) => {
       tags,
       images,
       meetup_location,
+      startup_id,
     } = req.body;
 
     if (!title || !description || !price || !type || !category || !condition) {
@@ -171,17 +204,35 @@ router.post('/', auth, (req, res) => {
     }
 
     const id = uuid();
+    let validatedStartupId = null;
+
+    if (startup_id) {
+      const startup = db
+        .prepare('SELECT id, founder_id FROM startups WHERE id = ?')
+        .get(startup_id);
+
+      if (!startup) {
+        return res.status(400).json({ error: 'Startup not found' });
+      }
+
+      if (startup.founder_id !== req.user.id) {
+        return res.status(403).json({ error: 'You can only add products to your own startup' });
+      }
+
+      validatedStartupId = startup.id;
+    }
 
     db.prepare(`
       INSERT INTO listings (
-        id, seller_id, title, description, price, original_price,
+        id, seller_id, startup_id, title, description, price, original_price,
         type, rent_period, category, condition, tags, images,
         meetup_location, status
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
     `).run(
       id,
       req.user.id,
+      validatedStartupId,
       title,
       description,
       Number(price),
@@ -226,10 +277,26 @@ router.put('/:id', auth, (req, res) => {
     images,
     meetup_location,
     status,
+    startup_id,
   } = req.body;
+
+  let validatedStartupId = null;
+  if (startup_id) {
+    const startup = db
+      .prepare('SELECT id, founder_id FROM startups WHERE id = ?')
+      .get(startup_id);
+
+    if (!startup) return res.status(400).json({ error: 'Startup not found' });
+    if (startup.founder_id !== req.user.id) {
+      return res.status(403).json({ error: 'You can only assign your own startup' });
+    }
+
+    validatedStartupId = startup.id;
+  }
 
   db.prepare(`
     UPDATE listings SET
+      startup_id = COALESCE(?, startup_id),
       title = COALESCE(?, title),
       description = COALESCE(?, description),
       price = COALESCE(?, price),
@@ -242,6 +309,7 @@ router.put('/:id', auth, (req, res) => {
       updated_at = datetime('now')
     WHERE id = ?
   `).run(
+    validatedStartupId,
     title || null,
     description || null,
     price ? Number(price) : null,
@@ -275,6 +343,26 @@ router.delete('/:id', auth, (req, res) => {
     .run(req.params.id);
 
   res.json({ success: true });
+});
+
+// ✅ WISHLIST
+router.post('/:id/wishlist', auth, (req, res) => {
+  const listing = db.prepare('SELECT * FROM listings WHERE id = ?').get(req.params.id);
+  if (!listing) return res.status(404).json({ error: 'Listing not found' });
+
+  const exists = db
+    .prepare('SELECT 1 FROM listing_wishlist WHERE user_id = ? AND listing_id = ?')
+    .get(req.user.id, req.params.id);
+
+  if (exists) {
+    db.prepare('DELETE FROM listing_wishlist WHERE user_id = ? AND listing_id = ?')
+      .run(req.user.id, req.params.id);
+    res.json({ saved: false });
+  } else {
+    db.prepare('INSERT INTO listing_wishlist (user_id, listing_id) VALUES (?, ?)')
+      .run(req.user.id, req.params.id);
+    res.json({ saved: true });
+  }
 });
 
 // ✅ LIKE

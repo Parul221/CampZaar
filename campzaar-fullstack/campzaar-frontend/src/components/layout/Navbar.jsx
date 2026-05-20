@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, MessageCircle, Sun, Moon, Plus, Menu, X, LogOut, User } from 'lucide-react';
+import { Search, Bell, MessageCircle, Sun, Moon, Plus, Menu, X, LogOut, User, Heart } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
 import './Navbar.css';
@@ -16,7 +16,8 @@ export default function Navbar() {
 
   // ✅ Google login function
  const handleGoogleLogin = () => {
-  window.location.href = "http://localhost:4000/api/auth/google";
+  const frontend = window.location.origin;
+  window.location.href = `http://localhost:4000/api/auth/google?frontend=${encodeURIComponent(frontend)}`;
 };
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -69,6 +70,9 @@ export default function Navbar() {
 
             {user ? (
               <>
+                <button className="nav-icon-btn" onClick={() => navigate('/wishlist')} title="Saved Listings">
+                  <Heart size={18} />
+                </button>
                 <button className="nav-icon-btn" onClick={() => navigate('/chat')}>
                   <MessageCircle size={18} />
                 </button>
@@ -92,6 +96,9 @@ export default function Navbar() {
                   
                   {profileMenuOpen && (
                     <div className="profile-dropdown">
+                      <button className="dropdown-item" onClick={() => { navigate('/wishlist'); setProfileMenuOpen(false); }}>
+                        <Heart size={16} /> Saved Listings
+                      </button>
                       <button className="dropdown-item" onClick={() => { navigate('/profile'); setProfileMenuOpen(false); }}>
                         <User size={16} /> View Profile
                       </button>
@@ -110,6 +117,8 @@ export default function Navbar() {
               </button>
             )}
 
+            {/* Dev debug removed */}
+
             <button className="mobile-menu-btn" onClick={() => setMobileOpen(!mobileOpen)}>
               {mobileOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
@@ -127,6 +136,7 @@ export default function Navbar() {
             {user ? (
               <>
                 <button className="mobile-nav-link" onClick={() => { navigate('/add-listing'); setMobileOpen(false); }}>+ Add Listing</button>
+                <button className="mobile-nav-link" onClick={() => { navigate('/wishlist'); setMobileOpen(false); }}>Saved Listings</button>
                 <button className="mobile-nav-link" onClick={() => { navigate('/profile'); setMobileOpen(false); }}>👤 Profile</button>
                 <button className="mobile-nav-link logout-link" onClick={() => { logout(); navigate('/'); setMobileOpen(false); }}>🚪 Logout</button>
               </>

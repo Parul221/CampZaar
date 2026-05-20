@@ -10,6 +10,9 @@ import ProductPage from './pages/ProductPage';
 import AddListingPage from './pages/AddListingPage';
 import RentalsPage from './pages/RentalsPage';
 import StartupsPage from './pages/StartupsPage';
+import StartupRegistrationPage from './pages/StartupRegistrationPage';
+import StartupShopPage from './pages/StartupShopPage';
+import WishlistPage from './pages/WishlistPage';
 import ChatPage from './pages/ChatPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
@@ -38,7 +41,10 @@ function AppRoutes() {
         <Route path="/product/:id" element={<ProductPage />} />
         <Route path="/rentals" element={<RentalsPage />} />
         <Route path="/startups" element={<StartupsPage />} />
+        <Route path="/startups/new" element={<ProtectedRoute><StartupRegistrationPage /></ProtectedRoute>} />
+        <Route path="/startups/:id" element={<StartupShopPage />} />
         <Route path="/add-listing" element={<ProtectedRoute><AddListingPage /></ProtectedRoute>} />
+        <Route path="/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/profile/:id" element={<ProfilePage />} />

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import ListingCard from '../components/shared/ListingCard';
 import { api } from '../services/api';
-import { categories } from '../data/mockData';
+import { listingCategories } from '../data/listingCategories';
 import './FeedPage.css';
 
 const sortOptions = [
@@ -87,7 +87,7 @@ export default function FeedPage() {
           </div>
 
           <div className="feed-categories">
-            {categories.map(cat => (
+            {listingCategories.map(cat => (
               <button key={cat.id}
                 className={`cat-pill ${activeCategory === cat.id ? 'active' : ''}`}
                 onClick={() => { setActiveCategory(cat.id); setPage(1); }}

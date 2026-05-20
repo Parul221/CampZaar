@@ -1,17 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, CheckCircle, Camera } from 'lucide-react';
 import { api, API_ORIGIN, resolveMediaUrl } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
-import { categories } from '../data/mockData';
+import { listingCategories } from '../data/listingCategories';
 import './AddListingPage.css';
 
 const steps = ['Basic Info', 'Details', 'Pricing', 'Review'];
 const conditions = ['Like New', 'Good', 'Fair', 'For Parts'];
-const listingCategories = [
-  ...categories.filter((c) => c.id !== 'all' && c.id !== 'startups'),
-  { id: 'other', label: 'Other', icon: '🧩', color: '#f43f5e' },
-];
+const sellListingCategories = listingCategories.filter((category) => category.id !== 'all');
 
 export default function AddListingPage() {
   const navigate = useNavigate();
@@ -21,15 +18,22 @@ export default function AddListingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [myStartups, setMyStartups] = useState([]);
   const [form, setForm] = useState({
     title: '', description: '', category: '', condition: '',
     type: 'sell', price: '', original_price: '', rent_period: 'day',
-    tags: '', meetup_location: '', images: [],
+    tags: '', meetup_location: '', images: [], startup_id: '',
   });
 
   if (!user) { navigate('/auth'); return null; }
 
   const update = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  useEffect(() => {
+    api.getMyStartups()
+      .then(setMyStartups)
+      .catch(() => setMyStartups([]));
+  }, []);
 
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
@@ -109,6 +113,7 @@ export default function AddListingPage() {
       tags,
       meetup_location: form.meetup_location,
       images: form.images.map(img => img.url),
+      startup_id: form.startup_id || null,
     });
 
     console.log("✅ SUCCESS:", res);
@@ -203,7 +208,7 @@ export default function AddListingPage() {
               <div className="form-field">
                 <label className="form-label">Category *</label>
                 <div className="category-grid">
-                  {listingCategories.map(cat => (
+                  {sellListingCategories.map(cat => (
                     <button key={cat.id} className={`cat-select ${form.category === cat.id ? 'active' : ''}`}
                       onClick={() => update('category', cat.id)} style={{ '--cat-color': cat.color }}>
                       <span className="cat-select-icon">{cat.icon}</span><span>{cat.label}</span>
@@ -211,6 +216,17 @@ export default function AddListingPage() {
                   ))}
                 </div>
               </div>
+              {myStartups.length > 0 && (
+                <div className="form-field">
+                  <label className="form-label">Attach to Startup Shop</label>
+                  <select className="form-input" value={form.startup_id} onChange={e => update('startup_id', e.target.value)}>
+                    <option value="">Personal listing</option>
+                    {myStartups.map(startup => (
+                      <option key={startup.id} value={startup.id}>{startup.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           )}
 

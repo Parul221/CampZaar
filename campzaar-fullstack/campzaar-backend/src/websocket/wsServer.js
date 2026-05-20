@@ -73,6 +73,7 @@ function setupWebSocket(server) {
         const conv = db.prepare('SELECT * FROM conversations WHERE id = ?').get(conversation_id);
         if (!conv) return send(ws, { type: 'error', message: 'Conversation not found' });
         if (conv.buyer_id !== userId && conv.seller_id !== userId) return send(ws, { type: 'error', message: 'Forbidden' });
+        if (conv.status === 'closed') return send(ws, { type: 'error', message: 'Conversation is closed' });
 
         const id = uuid();
         db.prepare('INSERT INTO messages (id, conversation_id, sender_id, text) VALUES (?, ?, ?, ?)').run(id, conversation_id, userId, text.trim());

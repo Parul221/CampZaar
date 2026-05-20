@@ -304,6 +304,12 @@
   font-weight: 600;
 }
 
+.sc-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .sc-connect-btn {
   width: 100%;
   display: flex;
@@ -312,6 +318,10 @@
   gap: 8px;
   padding: 14px;
   font-size: 15px;
+}
+
+.sc-actions .btn-ghost {
+  border: 1px solid var(--border);
 }
 
 /* Submit CTA */
@@ -352,4 +362,5 @@
 @media (max-width: 768px) {
   .startups-grid { grid-template-columns: 1fr; }
   .submit-startup-cta { flex-direction: column; align-items: flex-start; }
+  .sc-actions { grid-template-columns: 1fr; }
 }

@@ -23,7 +23,18 @@ router.get('/', auth, (req, res) => {
   const enriched = rows.map(c => ({
     ...c,
     other_user: safeUser(c.buyer_id === req.user.id ? c.seller_id : c.buyer_id),
-    listing: c.listing_id ? db.prepare('SELECT id, title, price, images FROM listings WHERE id = ?').get(c.listing_id) : null,
+    listing: c.listing_id ? db.prepare('SELECT id, title, price, images, status FROM listings WHERE id = ?').get(c.listing_id) : null,
+    pending_otp: !!db.prepare(
+      `SELECT 1 FROM otps
+       WHERE conversation_id = ? AND used = 0 AND datetime(expires_at) > datetime('now')
+       LIMIT 1`
+    ).get(c.id),
+    pending_otp_expires_at: db.prepare(
+      `SELECT expires_at FROM otps
+       WHERE conversation_id = ? AND used = 0 AND datetime(expires_at) > datetime('now')
+       ORDER BY created_at DESC
+       LIMIT 1`
+    ).get(c.id)?.expires_at || null,
   }));
 
   res.json(enriched);
@@ -49,6 +60,14 @@ router.post('/', auth, (req, res) => {
     if (!seller_id) return res.status(400).json({ error: 'seller_id required' });
     if (seller_id === req.user.id) return res.status(400).json({ error: 'Cannot message yourself' });
 
+    if (listing_id) {
+      const listing = db.prepare('SELECT id, seller_id, status FROM listings WHERE id = ?').get(listing_id);
+      if (!listing) return res.status(404).json({ error: 'Listing not found' });
+      if (listing.status !== 'active') {
+        return res.status(400).json({ error: 'This item is no longer available' });
+      }
+    }
+
     // Check if conversation already exists
     let conv = listing_id
       ? db.prepare('SELECT * FROM conversations WHERE listing_id = ? AND buyer_id = ? AND seller_id = ?').get(listing_id, req.user.id, seller_id)
@@ -65,7 +84,9 @@ router.post('/', auth, (req, res) => {
     res.json({
       ...conv,
       other_user: safeUser(seller_id),
-      listing: conv.listing_id ? db.prepare('SELECT id, title, price, images FROM listings WHERE id = ?').get(conv.listing_id) : null,
+      listing: conv.listing_id ? db.prepare('SELECT id, title, price, images, status FROM listings WHERE id = ?').get(conv.listing_id) : null,
+      pending_otp: false,
+      pending_otp_expires_at: null,
     });
   } catch (err) {
     console.error(err);
@@ -81,6 +102,7 @@ router.post('/:id/messages', auth, (req, res) => {
   const conv = db.prepare('SELECT * FROM conversations WHERE id = ?').get(req.params.id);
   if (!conv) return res.status(404).json({ error: 'Not found' });
   if (conv.buyer_id !== req.user.id && conv.seller_id !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
+  if (conv.status === 'closed') return res.status(400).json({ error: 'Conversation is closed' });
 
   const id = uuid();
   db.prepare('INSERT INTO messages (id, conversation_id, sender_id, text) VALUES (?, ?, ?, ?)').run(id, req.params.id, req.user.id, text.trim());

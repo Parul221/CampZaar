@@ -3,8 +3,21 @@ export const API_ORIGIN = BASE.replace(/\/api\/?$/, '');
 
 export function resolveMediaUrl(url) {
   if (!url) return '';
-  if (/^https?:\/\//i.test(url)) return url;
-  return `${API_ORIGIN}${url.startsWith('/') ? url : `/${url}`}`;
+  try {
+    if (/^https?:\/\//i.test(url)) {
+      // If the URL points to the backend uploads path but a different host
+      // (e.g. leftover 10.80.94.118), normalize it to the current API origin.
+      const parsed = new URL(url);
+      if (parsed.pathname && parsed.pathname.startsWith('/uploads')) {
+        return `${API_ORIGIN}${parsed.pathname}`;
+      }
+      return url;
+    }
+
+    return `${API_ORIGIN}${url.startsWith('/') ? url : `/${url}`}`;
+  } catch (e) {
+    return url;
+  }
 }
 
 function initials(name = '') {
@@ -31,6 +44,7 @@ function normalizeListing(listing) {
     image: resolveMediaUrl(listing.image) || images[0] || '',
     originalPrice: listing.originalPrice ?? listing.original_price ?? null,
     tags: Array.isArray(listing.tags) ? listing.tags : [],
+    startup: listing.startup || null,
     seller: listing.seller
       ? {
           ...listing.seller,
@@ -96,6 +110,9 @@ export const api = {
   updateListing: (id, body) => request('PUT', `/listings/${id}`, body),
   deleteListing: (id) => request('DELETE', `/listings/${id}`),
   likeListing: (id) => request('POST', `/listings/${id}/like`),
+  toggleWishlist: (id) => request('POST', `/listings/${id}/wishlist`),
+  getWishlist: () => request('GET', '/listings/wishlist')
+    .then((data) => Array.isArray(data) ? data.map(normalizeListing) : []),
   getUserListings: (userId) => request('GET', `/listings/user/${userId}`, null, false)
     .then((data) => Array.isArray(data) ? data.map(normalizeListing) : []),
 
@@ -104,16 +121,23 @@ export const api = {
   getMessages: (convId) => request('GET', `/conversations/${convId}/messages`),
   startConversation: (body) => request('POST', '/conversations', body),
   sendMessage: (convId, text) => request('POST', `/conversations/${convId}/messages`, { text }),
+  generateOtp: (conversationId) => request('POST', '/otps/generate', { conversation_id: conversationId }),
+  verifyOtp: (conversationId, otp) => request('POST', '/otps/verify', { conversation_id: conversationId, otp }),
 
   // Users
   getUser: (id) => request('GET', `/users/${id}`, null, false),
   reviewUser: (id, body) => request('POST', `/users/${id}/review`, body),
 
   // Startups
-  //getStartups: (params = {}) => {
-    //const q = new URLSearchParams(params).toString();
-  //  return request('GET', `/startups${q ? '?' + q : ''}`, null, false);
- // },
- // createStartup: (body) => request('POST', '/startups', body),
- // upvoteStartup: (id) => request('POST', `/startups/${id}/upvote`),
+  getStartups: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return request('GET', `/startups${q ? '?' + q : ''}`, null, false);
+  },
+  getMyStartups: () => request('GET', '/startups/mine'),
+  getStartup: (id) => request('GET', `/startups/${id}`, null, false).then((data) => ({
+    ...data,
+    products: Array.isArray(data.products) ? data.products.map(normalizeListing) : [],
+  })),
+  createStartup: (body) => request('POST', '/startups', body),
+  upvoteStartup: (id) => request('POST', `/startups/${id}/upvote`),
 };

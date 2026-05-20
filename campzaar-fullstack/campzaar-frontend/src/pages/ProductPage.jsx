@@ -12,7 +12,7 @@ export default function ProductPage() {
   const { user } = useAuth();
   const [product, setProduct] = useState(null);
   const [related, setRelated] = useState([]);
-  const [liked, setLiked] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [activeImg, setActiveImg] = useState(0);
   const [loading, setLoading] = useState(true);
   const [chatLoading, setChatLoading] = useState(false);
@@ -23,7 +23,7 @@ export default function ProductPage() {
     api.getListing(id)
       .then(p => {
         setProduct(p);
-        setLiked(p.liked);
+        setSaved(p.wishlisted ?? p.liked);
         return api.getListings({ category: p.category, limit: 4 });
       })
       .then(data => setRelated(data.listings.filter(l => l.id !== id)))
@@ -31,12 +31,14 @@ export default function ProductPage() {
       .finally(() => setLoading(false));
   }, [id, navigate]);
 
-  const handleLike = async () => {
+  const handleSave = async () => {
     if (!user) { navigate('/auth'); return; }
     try {
-      const { liked: newLiked } = await api.likeListing(id);
-      setLiked(newLiked);
-    } catch {}
+      const { saved: newSaved } = await api.toggleWishlist(id);
+      setSaved(newSaved);
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   const handleChat = async () => {
@@ -151,6 +153,12 @@ export default function ProductPage() {
               </div>
             )}
 
+            {product.startup && (
+              <button className="seller-profile-btn" onClick={() => navigate(`/startups/${product.startup.id}`)}>
+                Visit {product.startup.name} Shop
+              </button>
+            )}
+
             <div className="safety-badges">
               <div className="safety-badge"><CheckCircle size={15} className="check-icon"/><span>Verified Seller</span></div>
               <div className="safety-badge"><Shield size={15} className="shield-icon"/><span>CampZaar Guarantee</span></div>
@@ -173,8 +181,8 @@ export default function ProductPage() {
                   <Trash2 size={18} />
                 </button>
               )}
-              <button className={`like-action ${liked ? 'liked' : ''}`} onClick={handleLike}>
-                <Heart size={20} fill={liked ? 'currentColor' : 'none'}/>
+              <button className={`like-action ${saved ? 'liked' : ''}`} onClick={handleSave}>
+                <Heart size={20} fill={saved ? 'currentColor' : 'none'}/>
               </button>
               <button className="share-action"><Share2 size={20}/></button>
             </div>

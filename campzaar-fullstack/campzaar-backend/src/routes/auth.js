@@ -71,10 +71,10 @@ router.post("/login", async (req, res) => {
 });
 
 // ================= GOOGLE AUTH =================
-router.get(
-  "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
+router.get("/google", (req, res, next) => {
+  const frontend = req.query.frontend || process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+  passport.authenticate("google", { scope: ["profile", "email"], state: encodeURIComponent(frontend) })(req, res, next);
+});
 
 router.get(
   "/google/callback",
@@ -82,14 +82,24 @@ router.get(
   (req, res) => {
     try {
       if (!req.user) {
-        return res.redirect("http://localhost:3000/login?error=no_user");
+        console.warn('Google callback: no user returned by passport');
+        const fallbackFrontend = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+        const frontend = req.query && req.query.state ? decodeURIComponent(req.query.state) : fallbackFrontend;
+        return res.redirect(`${frontend}/login?error=no_user`);
       }
 
       const email = req.user.email;
       const avatar_url = req.user.avatar_url || "";
 
-      if (!email.endsWith("@chitkara.edu.in")) {
-        return res.redirect("http://localhost:3000/login?error=unauthorized");
+      // determine frontend origin from OAuth state or env
+      const fallbackFrontend = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+      const frontend = req.query && req.query.state ? decodeURIComponent(req.query.state) : fallbackFrontend;
+
+      console.log('Google callback user:', { email, name: req.user.name, frontend });
+
+      const allowedDomain = process.env.GOOGLE_ALLOWED_DOMAIN;
+      if (allowedDomain && !email.endsWith(`@${allowedDomain}`)) {
+        return res.redirect(`${frontend}/login?error=unauthorized`);
       }
 
       const user = db
@@ -97,6 +107,7 @@ router.get(
         .get(email);
 
       if (user) {
+        console.log('Existing user found; issuing token for', user.id);
         db.prepare(`
           UPDATE users
           SET full_name = ?, avatar_url = COALESCE(NULLIF(?, ''), avatar_url)
@@ -104,7 +115,8 @@ router.get(
         `).run(req.user.name || user.full_name, avatar_url, user.id);
 
         const token = jwt.sign({ id: user.id }, JWT_SECRET);
-        return res.redirect(`http://localhost:3000/login-success?token=${token}`);
+        console.log('Redirecting to frontend with token for existing user');
+        return res.redirect(`${frontend.replace(/\/$/, '')}/login-success?token=${token}`);
       }
 
       const id = uuid();
@@ -117,11 +129,15 @@ router.get(
         VALUES (?,?,?,?,?,?,?)
       `).run(id, email, username, null, full_name, college, avatar_url);
 
+      console.log('Created new user', id, email);
       const token = jwt.sign({ id }, JWT_SECRET);
-      return res.redirect(`http://localhost:3000/login-success?token=${token}`);
+      console.log('Redirecting to frontend with token for new user');
+      return res.redirect(`${frontend.replace(/\/$/, '')}/login-success?token=${token}`);
     } catch (err) {
       console.error("Google callback error:", err);
-      res.redirect("http://localhost:3000/login?error=server_error");
+      const fallbackFrontend = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+      const frontend = req.query && req.query.state ? decodeURIComponent(req.query.state) : fallbackFrontend;
+      res.redirect(`${frontend}/login?error=server_error`);
     }
   }
 );
