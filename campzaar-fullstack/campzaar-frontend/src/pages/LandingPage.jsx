@@ -77,8 +77,8 @@ export default function LandingPage() {
             <div className="hero-card-stack">
               <div className="hero-main-card"><div className="hmc-img-placeholder"/></div>
               <div className="right-section"><AnimatedMascot /> {/* priyal */}</div>
-              <div className="hero-float-card fc-1"><div className="fc-icon">Wear</div><div><div className="fc-title">Clothing</div><div className="fc-sub">Swap and shop</div></div></div>
-              <div className="hero-float-card fc-2"><div className="fc-icon">Food</div><div><div className="fc-title">Eatables</div><div className="fc-sub">Campus favorites</div></div></div>
+              <div className="hero-float-card fc-1"><div><div className="fc-title">Clothing</div><div className="fc-sub">Swap and shop</div></div></div>
+              <div className="hero-float-card fc-2"><div><div className="fc-title">Eatables</div><div className="fc-sub">Campus favorites</div></div></div>
             </div>
           </div>
         </div>
